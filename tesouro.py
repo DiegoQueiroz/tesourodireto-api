@@ -1,14 +1,18 @@
-import urllib
+from urllib2 import urlopen
+from urllib2 import Request
 import os
 
 def retrieveurl(url, filename=None):
     success = False
     
-    fp = urllib.urlopen(url)
+    # Tesouro website needs a stupid valid UserAgent. ;/ 
+    useragent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11'
+    
+    fp = urlopen(Request(url, headers={'User-Agent': useragent}))
     try:
         headers = fp.info()
         code = fp.getcode()
-        if code == 200:            
+        if code == 200: # HTTP CODE 200 OK       
             if filename:
                 tfp = open(filename, 'wb')
             else:
@@ -20,7 +24,7 @@ def retrieveurl(url, filename=None):
                 bs = 1024 * 8
                 size = -1
                 read = 0
-                if "content-length" in headers:
+                if "Content-Length" in headers:
                     size = int(headers["Content-Length"])
                 
                 while True:
@@ -49,13 +53,20 @@ if __name__ == '__main__':
     
     csv_delimiter  = ','
     quote_char     = '"'
+    #baseurl = 'http://www.tesouro.fazenda.gov.br/tesouro_direto/download/historico/{0}/{1}_{0}.xls'
+    baseurl_oldyears = 'http://www3.tesouro.gov.br/tesouro_direto/download/historico/{0}/historico{1}_{0}.xls'
+    baseurl_currentyear = 'https://www.tesouro.fazenda.gov.br/images/arquivos/artigos/{1}_{0}.xls'
+    
     try:
-        interval   = int(sys.argv[1]) # days
+        interval   = int(sys.argv[1]) # in years
     except:
         interval   = 1 # in years
-    
-    baseurl = 'http://www.tesouro.fazenda.gov.br/tesouro_direto/download/historico/{0}/{1}_{0}.xls'
-    docs = ['LFT', 'LTN', 'NTNC', 'NTNB', 'NTNB_Principal', 'NTNF', ]
+        
+    try:
+        docs = sys.argv[2]
+    except:
+        docs = ['LFT', 'LTN', 'NTN-C', 'NTN-B', 'NTN-B_Principal', 'NTN-F', ]
+        
     currentyear = date.today().year
     
     with open('FUNDOS_TESOURO_QUICKEN.csv','wb') as f:
@@ -64,18 +75,18 @@ if __name__ == '__main__':
         for doc in docs:
             for year in range(currentyear,currentyear-interval,-1):
                 if year == currentyear:
-                    url = baseurl.format(year,doc)
+                    url = baseurl_currentyear.format(year,doc)
                 else:
                     # Files in history are prefixed with the word "historico"
                     # Also NTNB_Principal is spelled NTNBPrincipal (without underscore) in history
-                    url = baseurl.format(year,'historico' + doc.replace('_',''))
+                    url = baseurl_oldyears.format(year,doc.replace('_','').replace('-',''))
                     
                 ( xlsfile, success ) = retrieveurl(url)
                 if success:
                     xls = xlrd.open_workbook(xlsfile)
                     
-                    for sheet in xls.sheets():
-                        securityname = 'TN_' + sheet.name.split(' ')[-1]
+                    for sheet in xls.sheets():                        
+                        securityname = 'TN_' + doc + '_' + sheet.name.split(' ')[-1]
                         
                         for row in range(2,sheet.nrows):
                             
