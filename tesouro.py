@@ -1,3 +1,4 @@
+from __future__ import print_function
 from urllib2 import urlopen
 from urllib2 import Request
 import os
@@ -74,6 +75,9 @@ if __name__ == '__main__':
         
         for doc in docs:
             for year in range(currentyear,currentyear-interval,-1):
+                
+                print('Downloading %-40s... ' % ( "%s year %d" % (doc,year) ),end='')
+                
                 if year == currentyear:
                     url = baseurl_currentyear.format(year,doc)
                 else:
@@ -82,7 +86,9 @@ if __name__ == '__main__':
                     url = baseurl_oldyears.format(year,doc.replace('_','').replace('-',''))
                     
                 ( xlsfile, success ) = retrieveurl(url)
-                if success:
+                if not success:
+                    print('ERROR!')
+                else:
                     xls = xlrd.open_workbook(xlsfile)
                     
                     for sheet in xls.sheets():                        
@@ -114,7 +120,7 @@ if __name__ == '__main__':
                             
                             arqcsv.writerow(reg)
                             
-                    print('Downloaded %s prices from year %d.' % (doc,year))
+                    print('success!')
     
-        print('Finished!')
+        pass # Finished
         
